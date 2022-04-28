@@ -1,0 +1,32 @@
+train_data_root: G:/sjh/origin_dataset/dataset_8w_11/Junction_graph_8w_split/train
+val_data_root: G:/sjh/origin_dataset/dataset_8w_11/Junction_graph_8w_split/val
+save_log_root: log
+result_file: result_junction.csv
+module_name: LabelNet
+model_name: dlink34no
+load_model_path: None
+load_connect_path: None
+mask_size: 9
+multi_GPU: False
+batch_size: 16
+num_workers: 3
+print_freq: 300
+max_epoch: 60
+current_epoch: 0
+save_freq: 10
+val_freq: 1
+update_lr: True
+lr_decay_freq: 1
+lr_base: 0.00012
+weight_decay: 0.0001
+num_classes: 8
+num_channels: 6
+parse: <bound method LabelNetConfig.parse of <config_LabelNet.LabelNetConfig object at 0x0000022F9CE00880>>
+Training start time: Apr 19 2022 16:17:29
+Building model...
+Building dataset...
+Building data loader...
+Building criterion and optimizer...
+Starting to train...
+
+Training epoch: 1
