@@ -15,10 +15,9 @@ class LabelNetDataset(data.Dataset):
 
     def __getitem__(self, index):
         floorplan_path = self.floorplans[index]
-        floorplan = LoadFloorplan_LabelNet(floorplan_path, self.mask_size,random_shuffle=True)
+        floorplan = LoadFloorplan_LabelNet(floorplan_path)
 
-        input = floorplan.get_composite_seman()
+        input = floorplan.get_composite_label()
         target =floorplan.get_target()
-
         target =np.uint8(target)
         return input, target

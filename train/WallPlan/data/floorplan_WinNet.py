@@ -82,7 +82,7 @@ def list_add(a,b):
 class LoadFloorplan_livwindow():
     def __init__(self, floorplan_graph, mask_size=5, random_shuffle=True):
         with open(floorplan_graph, 'rb') as pkl_file:
-            [door_info, boundary_mask_120, inside_mask_120, new_window_mask] = pickle.load(pkl_file)
+            [door_info, boundary_mask_120, inside_mask_120, window_mask] = pickle.load(pkl_file)
         plan_name=(os.path.split(floorplan_graph)[-1]).split("multi_")[-1]
 
 
@@ -96,7 +96,7 @@ class LoadFloorplan_livwindow():
         all_mask[door_mask>0]=2
 
         liv_win_mask=np.zeros((120,120),dtype=np.uint8)
-        liv_win_mask[new_window_mask== 2]=1
+        liv_win_mask[window_mask== 2]=1
 
 
         "input"
@@ -107,7 +107,7 @@ class LoadFloorplan_livwindow():
 
 
         liv_win_mask=np.zeros((120,120),dtype=np.uint8)
-        liv_win_mask[new_window_mask==1]=1
+        liv_win_mask[window_mask==1]=1
 
         "output"
         self.gd_liv_window=t.from_numpy(liv_win_mask)
@@ -127,24 +127,22 @@ class LoadFloorplan_otherwindow():
     def __init__(self, floorplan_graph, mask_size=5, random_shuffle=True):
 
         with open(floorplan_graph, 'rb') as pkl_file:
-            [door_mask_120, boundary_mask_120,inside_mask_120, new_window_mask] = pickle.load(pkl_file)
+            [door_mask_120, boundary_mask_120,inside_mask_120, window_mask] = pickle.load(pkl_file)
 
         liv_win_mask = np.zeros((120, 120), dtype=np.uint8)
-        liv_win_mask[new_window_mask == 1] = 1
+        liv_win_mask[window_mask == 1] = 1
         door_mask=door_mask_120
         all_mask=copy.deepcopy(boundary_mask_120)
         all_mask[door_mask>0]=2
         all_mask[liv_win_mask>0]=3
         other_win_mask = np.zeros((120, 120), dtype=np.uint8)
-        other_win_mask[new_window_mask == 2] = 1
+        other_win_mask[window_mask == 2] = 1
         "input"
         self.boundary_mask=t.from_numpy(boundary_mask_120)
         self.inside_mask=t.from_numpy(inside_mask_120)
         self.front_door_mask=t.from_numpy(door_mask)
         self.liv_win_mask = t.from_numpy(liv_win_mask)
         self.all_mask=t.from_numpy(all_mask)
-
-
         "output"
         self.gd_other_window=t.from_numpy(other_win_mask)
     def get_composite_window(self):
@@ -163,7 +161,7 @@ class LoadFloorplan_application_livwindow():
 
         with open(floorplan_graph, 'rb') as pkl_file:
             [inter_graph, door_mask_120, boundary_mask_120, inside_mask_120,
-             rooms_info, connects, new_window_mask] = pickle.load(pkl_file)
+             rooms_info, connects, window_mask] = pickle.load(pkl_file)
 
         partial_wall_mask = np.zeros((120, 120), dtype=np.uint8)
         bubble_node_mask = np.zeros((120, 120), dtype=np.uint8)
@@ -181,12 +179,12 @@ class LoadFloorplan_application_livwindow():
             pass
 
         liv_win_mask = np.zeros((120, 120), dtype=np.uint8)
-        liv_win_mask[new_window_mask == 1] = 1
+        liv_win_mask[window_mask == 1] = 1
         door_mask=door_mask_120
         all_mask=copy.deepcopy(boundary_mask_120)
         all_mask[door_mask>0]=2
         other_win_mask = np.zeros((120, 120), dtype=np.uint8)
-        other_win_mask[new_window_mask == 2] = 1
+        other_win_mask[window_mask == 2] = 1
         "input"
         self.boundary_mask=t.from_numpy(boundary_mask_120)
         self.inside_mask=t.from_numpy(inside_mask_120)
@@ -219,7 +217,7 @@ class LoadFloorplan_application_otherwindow():
 
         with open(floorplan_graph, 'rb') as pkl_file:
             [ inter_graph, door_mask_120, boundary_mask_120, inside_mask_120,
-             rooms_info, connects, new_window_mask] = pickle.load(
+             rooms_info, connects, window_mask] = pickle.load(
                 pkl_file)
 
         partial_wall_mask = np.zeros((120, 120), dtype=np.uint8)
@@ -236,15 +234,14 @@ class LoadFloorplan_application_otherwindow():
             partial_wall_mask = get_partial_loading(inter_graph)
         else:
             pass
-
         liv_win_mask = np.zeros((120, 120), dtype=np.uint8)
-        liv_win_mask[new_window_mask == 1] = 1
+        liv_win_mask[window_mask == 1] = 1
         door_mask = door_mask_120
         all_mask = copy.deepcopy(boundary_mask_120)
         all_mask[door_mask > 0] = 2
         all_mask[liv_win_mask>0]=3
         other_win_mask = np.zeros((120, 120), dtype=np.uint8)
-        other_win_mask[new_window_mask == 2] = 1
+        other_win_mask[window_mask == 2] = 1
         "input"
         self.boundary_mask = t.from_numpy(boundary_mask_120)
         self.inside_mask = t.from_numpy(inside_mask_120)
@@ -284,6 +281,7 @@ def convert_graph_120(wall_graph):
             junction_graph_120[i]['pos'][0] = junction_graph_120[i]['pos'][0]//2
             junction_graph_120[i]['pos'][1] = junction_graph_120[i]['pos'][1]//2
     return junction_graph_120
+
 def show_wall(img_path):
     walls=[14,15,16,17]
     print(img_path)

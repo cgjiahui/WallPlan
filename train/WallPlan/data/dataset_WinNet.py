@@ -19,9 +19,9 @@ class WindowDataset(data.Dataset):
     def __getitem__(self, index):
         floorplan_path = self.floorplans[index]
         if self.mode==0:
-            floorplan = LoadFloorplan_livwindow(floorplan_path, self.mask_size)
+            floorplan = LoadFloorplan_livwindow(floorplan_path)
         else:
-            floorplan = LoadFloorplan_otherwindow(floorplan_path, self.mask_size)
+            floorplan = LoadFloorplan_otherwindow(floorplan_path)
         input=floorplan.get_composite_window()
         target=floorplan.get_targetwindow()
         target=np.uint8(target)

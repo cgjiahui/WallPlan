@@ -124,6 +124,7 @@ class WallPlan_Main():
             fp_mask = floorplan_render(None,gen_junction_graph, room_circles, frontdoor_where, door_where,
                                                      livwins_where, wins_where,balcony_wins,no_balcony_wins,liv_window_para,special_balcony_doors,0)
             cv2.imwrite(f"{save_pth}"+plan_name.replace("pkl","png"),fp_mask)
+
     def init_input(self,boun_string,frontdoor_string,liv_win_str,win_str):
         boundary_graph=parse_graph(boun_string)
         door_list=parse_frontdoor(frontdoor_string)

@@ -43,7 +43,7 @@ def train(**kwargs):
     # step2: data
     log(log_file, 'Building dataset...')
     win_train_data = WindowDataset(data_root=win_opt.train_data_root, mask_size=win_opt.mask_size,mode=win_opt.mode)
-    win_val_data = WindowDataset(data_root=win_opt.val_data_root, mask_size=win_opt.mask_size)
+    win_val_data = WindowDataset(data_root=win_opt.val_data_root, mask_size=win_opt.mask_size,mode=win_opt.mode)
 
     log(log_file, 'Building data loader...')
     train_dataloader = DataLoader(

@@ -15,8 +15,6 @@ class LoadFloorplan_LabelNet():
             [junction_graph,room_circles,
              door_info, door_mask_120, boundary_mask_120, inside_mask_120,
              new_room_cate_mask, allG_iteration, boun_slices, boun_slices_room_order] = pickle.load(pkl_file)
-        plan_name = os.path.split(floorplan_graph)[-1]
-        pure_name = plan_name.split("multi_")[-1]
         door_slice = find_door_slice(door_info['pos'], boun_slices, junction_graph)
         door_info_120 = copy.deepcopy(door_info)
         door_info_120['pos'] = (np.array(door_info['pos']) - 8) // 2
@@ -45,7 +43,7 @@ class LoadFloorplan_LabelNet():
         "output"
         self.gd_seman_mask = t.from_numpy(new_room_cate_mask)
 
-    def get_composite_seman(self):
+    def get_composite_label(self):
         composite = t.zeros((6, 120, 120))
         composite[0] = self.boundary_mask
         composite[1] = self.inside_mask
@@ -175,7 +173,6 @@ class LoadFloorplan_LabelNet():
                 next = one_circle['circle'][i + 1]
                 pos1 = junction_graph[start]['pos']
                 pos2 = junction_graph[next]['pos']
-                "规定墙像素为100"
                 cv2.line(wall_mask, (pos1[1], pos1[0]), (pos2[1], pos2[0]), 100, 2, 4)
         room_cate_mask = copy.deepcopy(wall_mask)
         for one_circle in room_circles:
@@ -196,7 +193,6 @@ class LoadFloorplan_LabelNet():
         while (len(padding_array) > 0):
             pop_pos = padding_array.pop(0)
             # print(pop_pos)
-            "!!! 脑子抽筋 i为1位置，在w上   j才在h上"
             for i in range(pop_pos[1] - 1, pop_pos[1] + 2):
                 for j in range(pop_pos[0] - 1, pop_pos[0] + 2):
 
@@ -225,6 +221,8 @@ class LoadFloorplan_application_LabelNet():
         door_info_120['vex'] = door_slice[1]
 
         junction_graph_120=convert_graph_120(junction_graph)
+
+        "use of randomly distributed windows"
         window_mask=get_random_window(junction_graph_120,boun_slices_room_order,room_circles,door_info_120)
 
         all_mask=copy.deepcopy(boundary_mask_120)
@@ -248,10 +246,6 @@ class LoadFloorplan_application_LabelNet():
             loading_bearing_wall_mask = get_partial_loading(inter_graph)
         else:
             pass
-
-
-
-
         "input"
         self.boundary_mask=t.from_numpy(boundary_mask_120)
         self.inside_mask=t.from_numpy(inside_mask_120)
@@ -540,7 +534,7 @@ def convert_graph_120(junction_graph):
 def get_random_window(junction_graph,boun_slices_room_order,room_circles,door_info):
     setted_wins=[]
     setted_livwins=[]
-    for i in range(len(boun_slices_room_order)):  # 按room需要存放的 boun_slices段
+    for i in range(len(boun_slices_room_order)):
         room_cate = room_circles[i]['category']
         slices = boun_slices_room_order[i]
         if room_cate == 0:
@@ -551,7 +545,6 @@ def get_random_window(junction_graph,boun_slices_room_order,room_circles,door_in
             elif len(slices_filter) > 1:
                 slices_filter2 = sorted(slices_filter, key=lambda k: (k[2]))
                 setted_livwins.append(slices_filter2[-1])
-
         else:
             slices_filter = [slices[ind] for ind in range(len(slices)) if slices[ind][2] >= 10]
             if np.random.rand()>0.382:
@@ -630,4 +623,4 @@ def restore_window_mask(junction_graph,setted_livwins,setted_wins,door_info):
 
 
 if __name__ == '__main__':
-    train_pth="G:/sjh/deeplayout_dataset/all_graphs_dataset/all_graph/train/"
+    train_pth=""

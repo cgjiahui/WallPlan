@@ -610,7 +610,6 @@ def coupling_networks(fp_composite,boundary_mask_5pix,start_pos,Label_Net,Graph_
                                 wall_graph[new_node]['connect'][i] = selected_ind
                                 wall_graph[selected_ind]['connect'][get_reverse_ori(i)] = new_node
 
-
         iters_nodes.append(new_iter)
         last_nodes = iters_nodes[-1]
         if len(new_iter) == 0:

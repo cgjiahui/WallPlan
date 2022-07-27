@@ -70,6 +70,8 @@ def train(**kwargs):
     current_epoch = LabelNet_opt.current_epoch
     weight = torch.ones(7 + 1)
     weight[1]=1.3
+
+    "weight for storage"
     weight[7]=10
 
     weight=weight.cuda()
