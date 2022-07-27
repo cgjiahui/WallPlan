@@ -12,16 +12,16 @@ class LoadFloorplanGraphNet():
     def __init__(self, file_pth, model=None,mask_size=5, random_shuffle=True,button=0,process_splits=[0.4,0.5]):
         "Read data from pickle"
         with open(file_pth, 'rb') as pkl_file:
-            [junction_graph, room_circles,
+            [wall_graph, room_circles,
              door_info, door_mask_120, boundary_mask_120, inside_mask_120, allG_iteration, boun_slices, boun_slices_room_order] = pickle.load(pkl_file)
 
-        door_slice = find_door_slice(door_info['pos'], boun_slices, junction_graph)
+        door_slice = find_door_slice(door_info['pos'], boun_slices, wall_graph)
         door_info_120 = copy.deepcopy(door_info)
         door_info_120['pos'] = (np.array(door_info['pos']) - 8) // 2
         door_info_120['ori'] = door_info['ori']
         door_info_120['vex'] = door_slice[1]
 
-        junction_graph_120 = convert_graph_120(junction_graph)
+        junction_graph_120 = convert_graph_120(wall_graph)
 
         window_mask = get_random_window(junction_graph_120, boun_slices_room_order, room_circles, door_info_120)
         door_mask=door_mask_120
@@ -148,7 +148,7 @@ class LoadFloorplanGraphNet():
     def get_target_junction(self):
         return self.groundtruth
 
-def get_random_window(junction_graph,boun_slices_room_order,room_circles,door_info):
+def get_random_window(wall_graph,boun_slices_room_order,room_circles,door_info):
     setted_wins=[]
     setted_livwins=[]
     for i in range(len(boun_slices_room_order)):
@@ -179,23 +179,23 @@ def get_random_window(junction_graph,boun_slices_room_order,room_circles,door_in
                     if np.random.rand()>0.2:
                         setted_wins.extend(random.sample(slices_filter,np.random.randint(1,len(slices_filter)+1)))
 
-    random_win_mask=restore_window_mask(junction_graph,setted_livwins,setted_wins,door_info)
+    random_win_mask=restore_window_mask(wall_graph,setted_livwins,setted_wins,door_info)
     return random_win_mask
 
 class LoadFloorplanGraphNetApplication():
     def __init__(self, file_pth, model=None,mask_size=5, random_shuffle=True,button=0,process_splits=[0.4,0.5],constraint_split=[0.1,0.3,0.5]):
         with open(file_pth, 'rb') as pkl_file:
-            [junction_graph, inter_graph, room_circles,
+            [wall_graph, inter_graph, room_circles,
              door_info, door_mask_120, boundary_mask_120, inside_mask_120,
              rooms_info, connects, allG_iteration, boun_slices, boun_slices_room_order] = pickle.load(pkl_file)
 
-        door_slice = find_door_slice(door_info['pos'], boun_slices, junction_graph)
+        door_slice = find_door_slice(door_info['pos'], boun_slices, wall_graph)
         door_info_120 = copy.deepcopy(door_info)
         door_info_120['pos'] = (np.array(door_info['pos']) - 8) // 2
         door_info_120['ori'] = door_info['ori']
         door_info_120['vex'] = door_slice[1]
 
-        junction_graph_120 = convert_graph_120(junction_graph)
+        junction_graph_120 = convert_graph_120(wall_graph)
 
         window_mask = get_random_window(junction_graph_120, boun_slices_room_order, room_circles, door_info_120)
         door_mask=door_mask_120
@@ -391,14 +391,14 @@ def get_partial_loading(inter_graph):
             pos = node['pos']
             condition_mask[pos[0] - 1:pos[0] + 2, pos[1] - 1:pos[1] + 2] = 2
     return condition_mask
-def restore_window_mask(junction_graph,setted_livwins,setted_wins,door_info):
+def restore_window_mask(wall_graph,setted_livwins,setted_wins,door_info):
     window_mask = np.zeros((120, 120), dtype=np.uint8)
 
     for i in range(len(setted_wins)):
         single_win_slice=setted_wins[i]
         [ori,[ind1,ind2],_]=single_win_slice
-        c_h=(junction_graph[ind1]['pos'][0]+junction_graph[ind2]['pos'][0])//2
-        c_w=(junction_graph[ind1]['pos'][1]+junction_graph[ind2]['pos'][1])//2
+        c_h=(wall_graph[ind1]['pos'][0]+wall_graph[ind2]['pos'][0])//2
+        c_w=(wall_graph[ind1]['pos'][1]+wall_graph[ind2]['pos'][1])//2
 
         window_len=7//2
 
@@ -411,9 +411,9 @@ def restore_window_mask(junction_graph,setted_livwins,setted_wins,door_info):
         single_livwin=setted_livwins[i]
         [ori, [ind1, ind2], _] = single_livwin
         if set([ind1,ind2])!=set(door_info['vex']):
-            livwin_pos=get_setted_avgpos(junction_graph,single_livwin[1])
+            livwin_pos=get_setted_avgpos(wall_graph,single_livwin[1])
         else:
-            livwin_pos=find_extra_win_pos(junction_graph,single_livwin[1],door_info['pos'])
+            livwin_pos=find_extra_win_pos(wall_graph,single_livwin[1],door_info['pos'])
         window_len=15//2
         [c_h,c_w]=livwin_pos
         if ori==1 or ori==0:
@@ -421,10 +421,10 @@ def restore_window_mask(junction_graph,setted_livwins,setted_wins,door_info):
         elif ori==2 or ori==3:
             window_mask[c_h-2:c_h+3,c_w-window_len:c_w+window_len+1]=1
     return window_mask
-def get_setted_avgpos(junction_graph,nei_nodes):
+def get_setted_avgpos(wall_graph,nei_nodes):
     v1=nei_nodes[0]
     v2=nei_nodes[1]
-    return (np.array(junction_graph[v1]['pos'],dtype=np.int32)+np.array(junction_graph[v2]['pos'],dtype=np.int32))//2
+    return (np.array(wall_graph[v1]['pos'],dtype=np.int32)+np.array(wall_graph[v2]['pos'],dtype=np.int32))//2
 def find_extra_win_pos(graph,nei_nodes,door_pos):
     v1_pos=graph[nei_nodes[0]]['pos']
     v2_pos=graph[nei_nodes[1]]['pos']
@@ -444,7 +444,7 @@ def calculate_distance(pos1,pos2):
     pos2=np.array(pos2,dtype=np.int32)
     return pow(pos1[0]-pos2[0],2)+pow(pos1[1]-pos2[1],2)
 
-def find_door_slice(door_pos, boun_slices, junction_graph):
+def find_door_slice(door_pos, boun_slices, wall_graph):
     the_slice = None
     for slice in boun_slices:
         ori = slice[0]
@@ -452,8 +452,8 @@ def find_door_slice(door_pos, boun_slices, junction_graph):
             ori = 1
         else:
             ori = 0
-        s_pos = junction_graph[slice[1][0]]['pos']
-        e_pos = junction_graph[slice[1][1]]['pos']
+        s_pos = wall_graph[slice[1][0]]['pos']
+        e_pos = wall_graph[slice[1][1]]['pos']
         if ori == 0:
             if s_pos[1] < e_pos[1]:
                 left = s_pos[1]
@@ -486,8 +486,8 @@ def get_door_mask(door_info):
         door_mask[pos[0]-door_long:pos[0]+door_long+1,pos[1]-2:pos[1]+3]=1
     return door_mask
 
-def convert_graph_120(junction_graph):
-    junction_graph_120=copy.deepcopy(junction_graph)
+def convert_graph_120(wall_graph):
+    junction_graph_120=copy.deepcopy(wall_graph)
     for i in range(len(junction_graph_120)):
         if junction_graph_120[i]!=None:
             junction_graph_120[i]['pos'][0]=junction_graph_120[i]['pos'][0]-8

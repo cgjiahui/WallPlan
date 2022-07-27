@@ -352,7 +352,6 @@ def find_type0_slices(wall_graph):
     while(next_node):
         ori,distance=get_dire_d(wall_graph,current,next_node)
         slices.append([ori,[current,next_node],distance])
-
         searched.append(next_node)
         current=next_node
         next_node=get_next_out(wall_graph,start,current,ori)

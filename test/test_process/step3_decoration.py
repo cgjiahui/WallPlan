@@ -255,10 +255,10 @@ def render_front_door(fp_mask,front_doors_para):
         else:
             fp_mask[pos[0] - 10:pos[0] + 10, pos[1] - 3:pos[1] + 4] = color_map[7]
 
-def render_boun_mask(fp_mask,junction_graph,boun_searched,rgb):
+def render_boun_mask(fp_mask,wall_graph,boun_searched,rgb):
     for ind in range(len(boun_searched)-1):
-        pos1=junction_graph[boun_searched[ind]]['pos']
-        pos2=junction_graph[boun_searched[ind+1]]['pos']
+        pos1=wall_graph[boun_searched[ind]]['pos']
+        pos2=wall_graph[boun_searched[ind+1]]['pos']
         fp_mask[pos1[0] - 3:pos1[0] + 4, pos1[1] - 3:pos1[1] + 4] = rgb
         cv2.line(fp_mask,(pos1[1],pos1[0]),(pos2[1],pos2[0]),rgb,5,8)
 
@@ -940,15 +940,15 @@ def get_reverse_ori(ori):
         return 3
     else:
         return 2
-def clear_graph(junction_graph):
-    if get_bump_node(junction_graph):
-        Process_bump(junction_graph)
+def clear_graph(wall_graph):
+    if get_bump_node(wall_graph):
+        Process_bump(wall_graph)
 
-    if get_redundant_node(junction_graph):
-        Process_redundant(junction_graph)
+    if get_redundant_node(wall_graph):
+        Process_redundant(wall_graph)
 
-    Process_align(junction_graph)
-    return junction_graph
+    Process_align(wall_graph)
+    return wall_graph
 def get_bump_node(whole_graph):
     for node in whole_graph:
         if node!=None:
@@ -997,10 +997,10 @@ def merge_node(whole_graph,redundant_ind):
         whole_graph[the_connect[2]]['connect'][3] = the_connect[3]
         whole_graph[the_connect[3]]['connect'][2] = the_connect[2]
         whole_graph[redundant_ind]=None
-def Process_align(junction_graph):
-    slices_list = get_slices_list(junction_graph)
+def Process_align(wall_graph):
+    slices_list = get_slices_list(wall_graph)
     for one_slice in slices_list:
-        en_align_slice(junction_graph,one_slice)
+        en_align_slice(wall_graph,one_slice)
 def get_slices_list(graph):
     slices_list=[]
     for node in graph:
@@ -1053,13 +1053,13 @@ def en_align_slice(graph,one_slice):
         avg_w=get_avg_pos(one_slice['list'],graph,1)
         for ind in one_slice['list']:
             graph[ind]['pos'][1]=avg_w
-def get_avg_pos(list, junction_graph,ori):
+def get_avg_pos(list, wall_graph,ori):
     avg_pos=0
     if ori==0:
         for i in range(len(list)):
-            avg_pos += junction_graph[list[i]]['pos'][0]
+            avg_pos += wall_graph[list[i]]['pos'][0]
 
     elif ori==1:
         for i in range(len(list)):
-            avg_pos += junction_graph[list[i]]['pos'][1]
+            avg_pos += wall_graph[list[i]]['pos'][1]
     return round(avg_pos/len(list))

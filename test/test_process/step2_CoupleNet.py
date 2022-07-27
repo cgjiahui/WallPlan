@@ -53,8 +53,8 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
     # cv2.imshow("win_mask",window_mask*100)
     # cv2.waitKey()
     "初始化 junction_graph信息  iters_nodes信息"
-    junction_graph = []
-    junction_graph.append(None)
+    wall_graph = []
+    wall_graph.append(None)
     new_node = {}
     new_node['index'] = 1
     # print(graphs)
@@ -68,7 +68,7 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
     # print(f"新加的节点是:{new_node['pos']}")
     new_node['connect'] = [0, 0, 0, 0]
     new_node['type'] = 0
-    junction_graph.append(new_node)
+    wall_graph.append(new_node)
 
     iters_nodes = []  # 按迭代顺序加入到Junction graph中的节点
     iters_nodes.append([1])
@@ -79,18 +79,18 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
     "in_junction,in_wall 通过iters_nodes/junction graph获得，每次输入网络训练前更新"
     for nodes in iters_nodes:
         for node in nodes:
-            [c_h, c_w] = junction_graph[node]['pos']
+            [c_h, c_w] = wall_graph[node]['pos']
             in_junction[c_h - 2:c_h + 3, c_w - 2:c_w + 3] = 1
             in_wall_3pix[c_h - 1:c_h + 2, c_w - 1:c_w + 2] = 1
             # 初始化时没有inwall，故inwall可以不补方形
-            for i in junction_graph[node]['connect']:  # 注意是在junction graph查找
+            for i in wall_graph[node]['connect']:  # 注意是在junction graph查找
                 if i > 0:
-                    target = junction_graph[i]['pos']
+                    target = wall_graph[i]['pos']
                     cv2.line(in_wall, (c_w, c_h), (target[1], target[0]), 1, 3, 4)
                     cv2.line(in_wall_3pix, (c_w, c_h), (target[1], target[0]), 1, 2, 4)
 
     for node in last_nodes:
-        [c_h, c_w] = junction_graph[node]['pos']
+        [c_h, c_w] = wall_graph[node]['pos']
         in_junction[c_h - 2:c_h + 3, c_w - 2:c_w + 3] = 2
     in_junction_mask = t.from_numpy(in_junction)
     # in_bfs_wall_mask = t.from_numpy(in_wall)
@@ -163,7 +163,7 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
     out_filter[inter_mask == 0] = 0
     output = out_filter
 
-    "output:generated junction mask   iters_nodes:迭代的nodes组  junction_graph:已加入node的graph"
+    "output:generated junction mask   iters_nodes:迭代的nodes组  wall_graph:已加入node的graph"
     output_copy = np.copy(output)
     generated_nodes = get_output_nodes(output_copy)
     # print(len(generated_nodes[0]))
@@ -186,7 +186,7 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
 
     "3.开始迭代    过程:确定Filter后的节点和Last_nodes 已经之间的连接，添加，更新junction_graph iters"
     # 1.将gen_nodes_filter1,确定连接后加进graph/iters 2.更新输入的mask，再得到output  3.更新得到gen_nodes_filter1
-    # 更新iters_nodes junction_graph   iters_nodes[-1]是last_nodes
+    # 更新iters_nodes wall_graph   iters_nodes[-1]是last_nodes
     # gen_nodes_para[]
     dai = 0
     while (len(gen_nodes_filter1) > 0):
@@ -212,9 +212,9 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
         "1.连接last node和本次节点之间的连接"
         # print(f"生成了{len(gen_nodes_para)}个点:{gen_nodes_para}")
         for last_node in last_nodes:
-            last_pos = junction_graph[last_node]['pos']
+            last_pos = wall_graph[last_node]['pos']
             for i in range(4):  # i代表上下左右方向
-                if junction_graph[last_node]['connect'][i] == 0:
+                if wall_graph[last_node]['connect'][i] == 0:
                     neighbors = get_neighbors(last_pos, gen_nodes_para, i)
                     # print(f"给点{last_pos} 找{i}方向，找到{len(neighbors)}个邻居")
                     # print(f"neighbors 为:{neighbors}")   #neighbors 参数:[c_h,c_w,pix_num]
@@ -237,61 +237,61 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
                         # selected_node = sorted_nei[0]
                         "根据两点位置之间的output像素密度决定是否连接"  # 加一个判断条件，两位置之间没有加好的junction
                         if judge_connect(last_pos, [selected_node[0], selected_node[1]], output) and no_inter_junction(
-                                last_pos, [selected_node[0], selected_node[1]], junction_graph):
+                                last_pos, [selected_node[0], selected_node[1]], wall_graph):
                             ori = i
                             # print(f"diedai:{dai},pos1:f{last_pos},pos2:{[gen_node[0], gen_node[1]]}")
-                            apended_pos = [junction_graph[i]['pos'] for i in new_iter]
+                            apended_pos = [wall_graph[i]['pos'] for i in new_iter]
                             if [selected_node[0], selected_node[1]] not in apended_pos:
                                 new_node = {}
-                                new_node['index'] = junction_graph[-1]['index'] + 1
+                                new_node['index'] = wall_graph[-1]['index'] + 1
                                 new_node['pos'] = [selected_node[0], selected_node[1]]
 
                                 new_ori = get_reverse_ori(ori)
                                 connect = [0, 0, 0, 0]
                                 connect[new_ori] = last_node
                                 new_node['connect'] = connect
-                                junction_graph.append(new_node)
-                                junction_graph[last_node]['connect'][ori] = new_node['index']
+                                wall_graph.append(new_node)
+                                wall_graph[last_node]['connect'][ori] = new_node['index']
 
                                 new_iter.append(new_node['index'])
 
                             else:
                                 index = new_iter[-1]
                                 for ind in new_iter:
-                                    if [selected_node[0], selected_node[1]] == junction_graph[ind]['pos']:
+                                    if [selected_node[0], selected_node[1]] == wall_graph[ind]['pos']:
                                         index = ind  # 内部的index，作用域在下面不可见，必须在上循环外定义
                                         break
-                                junction_graph[last_node]['connect'][ori] = index
-                                junction_graph[index]['connect'][get_reverse_ori(ori)] = last_node
+                                wall_graph[last_node]['connect'][ori] = index
+                                wall_graph[index]['connect'][get_reverse_ori(ori)] = last_node
 
-        candidate_nodes = get_candidate_nodes(junction_graph, np.uint8(output > 0))
+        candidate_nodes = get_candidate_nodes(wall_graph, np.uint8(output > 0))
         for choice_ind in range(len(candidate_nodes) - 1):
             for compare_ind in range(choice_ind + 1, len(candidate_nodes)):
                 ind1 = candidate_nodes[choice_ind]
                 ind2 = candidate_nodes[compare_ind]
-                node1 = junction_graph[ind1]
-                node2 = junction_graph[ind2]
+                node1 = wall_graph[ind1]
+                node2 = wall_graph[ind2]
                 if may_connect(node1['pos'], node2['pos']):
-                    if no_inter_junction(node1['pos'], node2['pos'], junction_graph) and judge_connect_3pix(
+                    if no_inter_junction(node1['pos'], node2['pos'], wall_graph) and judge_connect_3pix(
                             node1['pos'], node2['pos'], output):  # 更严格的测试，使用5pix的测试,阈值0.75
                         target_ori = get_target_ori(node1['pos'], node2['pos'])
                         reverse_ori = get_reverse_ori(target_ori)
 
                         if node1['connect'][target_ori] == 0 and node2['connect'][reverse_ori] == 0:
-                            junction_graph[ind1]['connect'][target_ori] = ind2
-                            junction_graph[ind2]['connect'][reverse_ori] = ind1
+                            wall_graph[ind1]['connect'][target_ori] = ind2
+                            wall_graph[ind2]['connect'][reverse_ori] = ind1
 
         if len(new_iter) > 1:
             new_nodes_para = []
             for ind in new_iter:
-                pos = junction_graph[ind]['pos']
+                pos = wall_graph[ind]['pos']
                 for node_para in gen_nodes_para:
                     if pos[0] == node_para[0] and pos[1] == node_para[1]:
                         new_nodes_para.append(node_para)
             for new_node in new_iter:
-                new_pos = junction_graph[new_node]['pos']
+                new_pos = wall_graph[new_node]['pos']
                 for i in range(4):
-                    if junction_graph[new_node]['connect'][i] == 0:
+                    if wall_graph[new_node]['connect'][i] == 0:
                         neighbors = get_neighbors(new_pos, new_nodes_para, i)
 
                         if i == 0 or i == 1:
@@ -305,18 +305,18 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
                             else:
                                 selected_node = sorted_nei[0]
 
-                            for iter_node in junction_graph:
+                            for iter_node in wall_graph:
                                 if iter_node != None:
                                     if iter_node['pos'][0] == selected_node[0] and iter_node['pos'][1] == \
                                             selected_node[1]:
                                         selected_ind = iter_node['index']
                                         select_pos = iter_node['pos']
 
-                            if no_inter_junction(new_pos, select_pos, junction_graph) and \
-                                    junction_graph[selected_ind]['connect'][
+                            if no_inter_junction(new_pos, select_pos, wall_graph) and \
+                                    wall_graph[selected_ind]['connect'][
                                         get_reverse_ori(i)] == 0 and judge_connect(new_pos, select_pos, output):
-                                junction_graph[new_node]['connect'][i] = selected_ind
-                                junction_graph[selected_ind]['connect'][get_reverse_ori(i)] = new_node
+                                wall_graph[new_node]['connect'][i] = selected_ind
+                                wall_graph[selected_ind]['connect'][get_reverse_ori(i)] = new_node
 
         iters_nodes.append(new_iter)
         last_nodes = iters_nodes[-1]
@@ -327,17 +327,17 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
         in_wall_3pix = np.zeros((120, 120))
         for nodes in iters_nodes:
             for node in nodes:
-                [c_h, c_w] = junction_graph[node]['pos']
+                [c_h, c_w] = wall_graph[node]['pos']
                 in_junction[c_h - 2:c_h + 3, c_w - 2:c_w + 3] = 1
                 in_wall_3pix[c_h - 1:c_h + 2, c_w - 1:c_w + 2] = 1
                 in_wall[c_h - 2:c_h + 3, c_w - 2:c_w + 3] = 1
-                for i in junction_graph[node]['connect']:  # 注意是在junction graph查找
+                for i in wall_graph[node]['connect']:  # 注意是在junction graph查找
                     if i > 0:
-                        target = junction_graph[i]['pos']
+                        target = wall_graph[i]['pos']
                         cv2.line(in_wall, (c_w, c_h), (target[1], target[0]), 1, 3, 4)  # 数据格式和训练时保持一致
                         cv2.line(in_wall_3pix, (c_w, c_h), (target[1], target[0]), 1, 2, 4)
         for node in last_nodes:
-            [c_h, c_w] = junction_graph[node]['pos']
+            [c_h, c_w] = wall_graph[node]['pos']
             in_junction[c_h - 2:c_h + 3, c_w - 2:c_w + 3] = 2
 
         "in jun/wall for bfs"
@@ -389,7 +389,7 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
         for node in gen_nodes_para:
             [center_h, center_w, _] = node
             gen_nodes_restore[center_h - 2:center_h + 3, center_w - 2:center_w + 3] = 200
-    return junction_graph, output_seman, output_seman_8channel
+    return wall_graph, output_seman, output_seman_8channel
 
 def coupling_networks(fp_composite,boundary_mask_5pix,start_pos,Label_Net,Graph_Net):
     softmax = t.nn.Softmax(dim=1)
