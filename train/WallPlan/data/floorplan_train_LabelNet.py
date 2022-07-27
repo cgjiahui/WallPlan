@@ -14,7 +14,7 @@ class LoadFloorplan_LabelNet():
         with open(floorplan_graph, 'rb') as pkl_file:
             [wall_graph,room_circles,
              door_info, door_mask_120, boundary_mask_120, inside_mask_120,
-             new_room_cate_mask, allG_iteration, boun_slices, boun_slices_room_order] = pickle.load(pkl_file)
+                new_room_cate_mask, allG_iteration, boun_slices, boun_slices_room_order] = pickle.load(pkl_file)
         door_slice = find_door_slice(door_info['pos'], boun_slices, wall_graph)
         door_info_120 = copy.deepcopy(door_info)
         door_info_120['pos'] = (np.array(door_info['pos']) - 8) // 2
