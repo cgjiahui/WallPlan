@@ -10,8 +10,6 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
     softmax = t.nn.Softmax(dim=1)
     window_mask=gen_window_mask
 
-    "1.初始化，获得各项信息"
-    "带mask为tensor 不带为numpy   默认全为浮点（显示时转为uint8"
     boundary_mask = fp_basic[0]
     inside_mask = fp_basic[1]
     frontdoor_mask = fp_basic[2]
@@ -23,11 +21,6 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
     bubble_node_mask=fp_condi[0]
     bubble_connect_mask=fp_condi[1]
     bubble_connect_liv_mask=fp_condi[2]
-
-
-
-    # cv2.imshow("getted_win", np.uint8(window_mask) * 100)
-
     t_boundary_mask = t.from_numpy(boundary_mask)
     t_inside_mask = t.from_numpy(inside_mask)
     t_frontdoor_mask = t.from_numpy(frontdoor_mask)
@@ -36,13 +29,8 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
     t_bubble_node_mask=t.from_numpy(bubble_node_mask)
     t_bubble_connect_mask=t.from_numpy(bubble_connect_mask)
     t_bubble_connect_liv_mask=t.from_numpy(bubble_connect_liv_mask)
-
-    "inter_mask用于过滤  使用boundary graph恢复 bounmask，结合Inside mask用于过滤"
-    "用boundary graph获得 boun_5pix"
-
-    "用来过滤的 boun3_pix为不生成墙遮罩    用boun_5pix生成所有内部遮罩"
     inter_mask = copy.deepcopy(inside_mask)
-    inter_mask[boundary_mask_5pix > 0] = 1  # 查看一下用于过滤的inter mask
+    inter_mask[boundary_mask_5pix > 0] = 1
 
     "in_junction mask"
     in_junction = np.zeros((120, 120))
@@ -52,38 +40,31 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
 
     # cv2.imshow("win_mask",window_mask*100)
     # cv2.waitKey()
-    "初始化 junction_graph信息  iters_nodes信息"
     wall_graph = []
     wall_graph.append(None)
     new_node = {}
     new_node['index'] = 1
     # print(graphs)
-    # pos = junction_graph_120[graphs[0]['start']]['pos']  # 嵌套循环这个pos位置
+    # pos = junction_graph_120[graphs[0]['start']]['pos']
     pos = start_pos
     # star_pos_remask=copy.deepcopy(boundary_mask_real*100)
     # star_pos_remask[pos[0]-2:pos[0]+3,pos[1]-2:pos[1]+3]=200
     # cv2.imshow("start_pos_mask",star_pos_remask)
 
     new_node['pos'] = [pos[0], pos[1]]
-    # print(f"新加的节点是:{new_node['pos']}")
     new_node['connect'] = [0, 0, 0, 0]
     new_node['type'] = 0
     wall_graph.append(new_node)
 
-    iters_nodes = []  # 按迭代顺序加入到Junction graph中的节点
+    iters_nodes = []
     iters_nodes.append([1])
     last_nodes = iters_nodes[-1]
-
-    # show_junc_graph(whole_graph,"whole_groundtruth",boundary)   #查看一下ground truth
-    # seman inwall为3pixel   bfs inwall为5pixel
-    "in_junction,in_wall 通过iters_nodes/junction graph获得，每次输入网络训练前更新"
     for nodes in iters_nodes:
         for node in nodes:
             [c_h, c_w] = wall_graph[node]['pos']
             in_junction[c_h - 2:c_h + 3, c_w - 2:c_w + 3] = 1
             in_wall_3pix[c_h - 1:c_h + 2, c_w - 1:c_w + 2] = 1
-            # 初始化时没有inwall，故inwall可以不补方形
-            for i in wall_graph[node]['connect']:  # 注意是在junction graph查找
+            for i in wall_graph[node]['connect']:
                 if i > 0:
                     target = wall_graph[i]['pos']
                     cv2.line(in_wall, (c_w, c_h), (target[1], target[0]), 1, 3, 4)
@@ -118,14 +99,9 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
     score_seman = seman_model(seman_composite.reshape(1, 9, 120, 120))
     output_seman_8channel = softmax(score_seman.cpu()).detach().numpy().reshape((8, 120, 120))
     output_seman = np.argmax(output_seman_8channel, axis=0)
-    # cv2.imshow("out_put_seman1", np.uint8(output_seman) * 33)
-    # storage_mask2=np.zeros((120,120),dtype=np.uint8)
-    # storage_mask2[output_seman==7]=255
-    # cv2.imshow("storage2",storage_mask2)
 
     t_out_seman = t.from_numpy(output_seman)
 
-    "带mask为tensor，输入到网络进行预测"
     bfs_composite = t.zeros((11, 120, 120))
     bfs_composite[0] = t_boundary_mask
     bfs_composite[1] = t_inside_mask
@@ -140,7 +116,6 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
     bfs_composite[9] = t_bubble_connect_mask
     bfs_composite[10] = t_bubble_connect_liv_mask
 
-    "展示 input"
     in_img = copy.deepcopy(np.uint8(t_boundary_mask.numpy()) * 100)
     in_img[t_frontdoor_mask > 0] = 255
     in_img[t_window_mask.numpy() > 0] = 200
@@ -158,36 +133,27 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
     output = np.argmax(softmax(score_model.cpu()).detach().numpy().reshape((3, 120, 120)), axis=0)
     output = np.uint8(output)
 
-    "更换过滤策略"
     out_filter = copy.deepcopy(output)
     out_filter[inter_mask == 0] = 0
     output = out_filter
 
-    "output:generated junction mask   iters_nodes:迭代的nodes组  wall_graph:已加入node的graph"
     output_copy = np.copy(output)
     generated_nodes = get_output_nodes(output_copy)
     # print(len(generated_nodes[0]))
     # print(generated_nodes)
 
-    "2.处理.Filter 简单处理过滤，先设置<18pixel不要" "动态阈值获得多样性结果？"
     gen_nodes_filter1 = []
     for node in generated_nodes:
-        if len(node) > 7:  # 3pix 版本，阈值设为7?
+        if len(node) > 7:
             gen_nodes_filter1.append(node)
 
-    "最终将生成的junction 转为gen_nodes_para，并用来 更新junction graph和iters 存储[c_h,c_w,pix_num]"
     gen_nodes_para = []
-    for node in gen_nodes_filter1:  # 顺序性应和filter2相同
+    for node in gen_nodes_filter1:
         pixel_num = len(node)
         center_h, center_w = get_avg_pos(node)
         gen_nodes_para.append([center_h, center_w, pixel_num])
 
     break_count = 0
-
-    "3.开始迭代    过程:确定Filter后的节点和Last_nodes 已经之间的连接，添加，更新junction_graph iters"
-    # 1.将gen_nodes_filter1,确定连接后加进graph/iters 2.更新输入的mask，再得到output  3.更新得到gen_nodes_filter1
-    # 更新iters_nodes wall_graph   iters_nodes[-1]是last_nodes
-    # gen_nodes_para[]
     dai = 0
     while (len(gen_nodes_filter1) > 0):
         break_count = break_count + 1
@@ -195,47 +161,24 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
             break
 
         dai = dai + 1
-        # print(f"diedai:{dai}")
-        new_iter = []  # new_iter是本次加入的节点，如果为0死循环情况！！如果为0，写一个动态调整判断junction阈值
+        new_iter = []
         last_nodes = iters_nodes[-1]
 
-        "重要！ gen_nodes_para"
-
-        "Step1.使用新的思路确定上次生成junction和已有之间的连接，"
-        "新思路：从每个last_node上下左右对齐方向找并排序判断 "
-        "原則：从上下左右找最近连接"
-        "同方向的连完"
-
-        "判断一下已加入graph的还是否有连接"
-
-        "写一个，同方向选择最优情况连"
-        "1.连接last node和本次节点之间的连接"
-        # print(f"生成了{len(gen_nodes_para)}个点:{gen_nodes_para}")
         for last_node in last_nodes:
             last_pos = wall_graph[last_node]['pos']
-            for i in range(4):  # i代表上下左右方向
+            for i in range(4):
                 if wall_graph[last_node]['connect'][i] == 0:
                     neighbors = get_neighbors(last_pos, gen_nodes_para, i)
-                    # print(f"给点{last_pos} 找{i}方向，找到{len(neighbors)}个邻居")
-                    # print(f"neighbors 为:{neighbors}")   #neighbors 参数:[c_h,c_w,pix_num]
                     sorted_nei = []
-                    "选近的"
                     if i == 0 or i == 1:
                         sorted_nei = sorted(neighbors, key=lambda k: (k[0]))
                     else:
                         sorted_nei = sorted(neighbors, key=lambda k: (k[1]))
-                    "选多的"
-                    # sorted_nei = sorted(neighbors, key=lambda k: (k[2]), reverse=True)
                     if len(sorted_nei) > 0:
-                        "选近的"
                         if i == 0 or i == 2:
-                            selected_node = sorted_nei[-1]  # 方向相关
+                            selected_node = sorted_nei[-1]
                         else:
                             selected_node = sorted_nei[0]
-
-                        "选多的"
-                        # selected_node = sorted_nei[0]
-                        "根据两点位置之间的output像素密度决定是否连接"  # 加一个判断条件，两位置之间没有加好的junction
                         if judge_connect(last_pos, [selected_node[0], selected_node[1]], output) and no_inter_junction(
                                 last_pos, [selected_node[0], selected_node[1]], wall_graph):
                             ori = i
@@ -259,7 +202,7 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
                                 index = new_iter[-1]
                                 for ind in new_iter:
                                     if [selected_node[0], selected_node[1]] == wall_graph[ind]['pos']:
-                                        index = ind  # 内部的index，作用域在下面不可见，必须在上循环外定义
+                                        index = ind
                                         break
                                 wall_graph[last_node]['connect'][ori] = index
                                 wall_graph[index]['connect'][get_reverse_ori(ori)] = last_node
@@ -273,14 +216,13 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
                 node2 = wall_graph[ind2]
                 if may_connect(node1['pos'], node2['pos']):
                     if no_inter_junction(node1['pos'], node2['pos'], wall_graph) and judge_connect_3pix(
-                            node1['pos'], node2['pos'], output):  # 更严格的测试，使用5pix的测试,阈值0.75
+                            node1['pos'], node2['pos'], output):
                         target_ori = get_target_ori(node1['pos'], node2['pos'])
                         reverse_ori = get_reverse_ori(target_ori)
 
                         if node1['connect'][target_ori] == 0 and node2['connect'][reverse_ori] == 0:
                             wall_graph[ind1]['connect'][target_ori] = ind2
                             wall_graph[ind2]['connect'][reverse_ori] = ind1
-
         if len(new_iter) > 1:
             new_nodes_para = []
             for ind in new_iter:
@@ -331,10 +273,10 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
                 in_junction[c_h - 2:c_h + 3, c_w - 2:c_w + 3] = 1
                 in_wall_3pix[c_h - 1:c_h + 2, c_w - 1:c_w + 2] = 1
                 in_wall[c_h - 2:c_h + 3, c_w - 2:c_w + 3] = 1
-                for i in wall_graph[node]['connect']:  # 注意是在junction graph查找
+                for i in wall_graph[node]['connect']:
                     if i > 0:
                         target = wall_graph[i]['pos']
-                        cv2.line(in_wall, (c_w, c_h), (target[1], target[0]), 1, 3, 4)  # 数据格式和训练时保持一致
+                        cv2.line(in_wall, (c_w, c_h), (target[1], target[0]), 1, 3, 4)
                         cv2.line(in_wall_3pix, (c_w, c_h), (target[1], target[0]), 1, 2, 4)
         for node in last_nodes:
             [c_h, c_w] = wall_graph[node]['pos']
@@ -352,8 +294,6 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
         score_seman = seman_model(seman_composite.reshape((1, 9, 120, 120)))
         output_seman_8channel = softmax(score_seman.cpu()).detach().numpy().reshape((8, 120, 120))
         output_seman = np.argmax(output_seman_8channel, axis=0)
-
-
         t_out_seman = t.from_numpy(output_seman)
 
         bfs_composite = bfs_composite.reshape((11, 120, 120))
@@ -363,7 +303,7 @@ def test_graph_generate_app_new8w(fp_basic,fp_condi,gen_window_mask,boundary_mas
 
         score_model = bfs_model(bfs_composite.reshape((1, 11, 120, 120)))
         output = np.argmax(softmax(score_model.cpu()).detach().numpy().reshape((3, 120, 120)), axis=0)
-        output = np.uint8(output)  # output 是本次生成的
+        output = np.uint8(output)
         out_filter = copy.deepcopy(output)
         out_filter[inter_mask == 0] = 0
         output = out_filter
@@ -424,7 +364,6 @@ def coupling_networks(fp_composite,boundary_mask_5pix,start_pos,Label_Net,Graph_
     new_node['index'] = 1
 
     pos = start_pos
-    
     new_node['pos'] = [pos[0], pos[1]]
     new_node['connect'] = [0, 0, 0, 0]
     new_node['type'] = 0
@@ -556,7 +495,7 @@ def coupling_networks(fp_composite,boundary_mask_5pix,start_pos,Label_Net,Graph_
                                 wall_graph[last_node]['connect'][ori] = index
                                 wall_graph[index]['connect'][get_reverse_ori(ori)] = last_node
 
-        possible_nodes = get_possible_nodes(wall_graph,np.uint8(output>0))
+        possible_nodes = get_candidate_nodes(wall_graph,np.uint8(output>0))
 
         "other possible connections"
         for choice_ind in range(len(possible_nodes)-1):
@@ -734,6 +673,8 @@ def judge_connect_3pix(pos1, pos2, output, radio=0.7):
 def may_connect(pos1,pos2):
     return min( abs(np.int32(pos1[0])-np.int32(pos2[0])),abs(np.int32(pos1[1])-np.int32(pos2[1])))<=2
 
+
+
 def count_junction_area(pos,mask):
     [h,w]=pos
     count=0
@@ -744,7 +685,7 @@ def count_junction_area(pos,mask):
 
     return count
 
-def get_possible_nodes(grpah,output):
+def get_candidate_nodes(grpah,output):
     candidates_nodes=[]
     for node in grpah:
         if node!=None:

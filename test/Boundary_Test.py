@@ -620,7 +620,7 @@ if __name__=="__main__":
     val_pth="./input/"
     val_files = [val_pth + name for name in os.listdir(val_pth) if os.path.splitext(name)[1] == ".pkl"]
     for fp_file in val_files:
-        WallPlan.generate_from_val(fp_file,"./output2/")
+        WallPlan.generate_from_val(fp_file,"./output/")
 
 
 
